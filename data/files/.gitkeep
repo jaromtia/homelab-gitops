@@ -1,0 +1,2 @@
+# This file ensures the data/files directory is tracked in git
+# The directory will be used for FileBrowser persistent storage
