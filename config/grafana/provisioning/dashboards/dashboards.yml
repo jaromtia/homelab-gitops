@@ -1,0 +1,38 @@
+# Grafana Dashboard Provisioning Configuration
+# Automatically loads dashboards from the dashboards directory
+
+apiVersion: 1
+
+providers:
+  # Infrastructure monitoring dashboards
+  - name: 'homelab-infrastructure'
+    orgId: 1
+    folder: 'Homelab Infrastructure'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/infrastructure
+
+  # Application monitoring dashboards
+  - name: 'homelab-applications'
+    orgId: 1
+    folder: 'Applications'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/applications
+
+  # System monitoring dashboards
+  - name: 'homelab-system'
+    orgId: 1
+    folder: 'System Monitoring'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/system

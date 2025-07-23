@@ -17,7 +17,7 @@
 
 - [x] 3. Create core Docker Compose infrastructure
 
-
+ 12q 06
 - [x] 3.1 Implement main Docker Compose file with networking
   - Define isolated networks for frontend, backend, and monitoring
   - Configure Traefik service with proper port mappings and volumes
@@ -32,20 +32,31 @@
   - Add restart policies with exponential backoff
   - _Requirements: 1.4_
 
-- [ ] 4. Implement monitoring stack (Prometheus, Grafana, Loki)
-- [ ] 4.1 Create Prometheus configuration and service
+- [x] 4. Implement monitoring stack (Prometheus, Grafana, Loki)
+
+
+
+
+
+- [x] 4.1 Create Prometheus configuration and service
+
+
   - Write Prometheus configuration for metrics collection
   - Configure service discovery for Docker containers
   - Set up node exporter and cAdvisor for system metrics
   - _Requirements: 4.1_
 
-- [ ] 4.2 Implement Grafana with pre-configured dashboards
+- [x] 4.2 Implement Grafana with pre-configured dashboards
+
+
   - Create Grafana service with persistent data volume
   - Configure Prometheus and Loki as data sources
   - Provision infrastructure monitoring dashboards
   - _Requirements: 4.2_
 
-- [ ] 4.3 Set up Loki and Promtail for log aggregation
+- [x] 4.3 Set up Loki and Promtail for log aggregation
+
+
   - Configure Loki for log storage and querying
   - Set up Promtail to collect Docker container logs
   - Integrate log collection with Grafana for unified observability
