@@ -1,0 +1,360 @@
+# Homelab Infrastructure Dashboard Configuration Template
+# This configuration provides a centralized dashboard for all homelab services
+# with health monitoring, custom themes, and search functionality
+
+# =============================================================================
+# PAGE CONFIGURATION
+# =============================================================================
+pageInfo:
+  title: Homelab Infrastructure Dashboard
+  description: Centralized access point for all homelab services
+  navLinks:
+    - title: GitHub Repository
+      path: https://github.com/${GITHUB_USERNAME}/homelab-infrastructure
+    - title: Documentation
+      path: https://github.com/${GITHUB_USERNAME}/homelab-infrastructure/wiki
+  footerText: 'Homelab Infrastructure | Powered by Docker & Traefik'
+
+# =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
+appConfig:
+  # Theme and appearance
+  theme: colorful
+  layout: auto
+  iconSize: medium
+  language: en
+  
+  # Search functionality
+  enableFontAwesome: true
+  fontAwesomeKey: free
+  faviconApi: allesedv
+  
+  # Status checking
+  statusCheck: true
+  statusCheckInterval: 30
+  
+  # Authentication (optional - can be enabled later)
+  auth:
+    enableGuestAccess: true
+    users: []
+  
+  # Customization
+  customColors:
+    primary: '#20E3B2'
+    background: '#0B1426'
+    background-darker: '#06101C'
+    curve-factor: '10px'
+    dimming-factor: '0.7'
+  
+  # Hide components
+  hideComponents:
+    hideHeading: false
+    hideNav: false
+    hideSearch: false
+    hideSettings: false
+    hideFooter: false
+  
+  # Disable UI features
+  disableConfiguration: false
+  disableConfigurationForNonAdmin: true
+  allowConfigEdit: true
+  enableServiceWorker: true
+  enableErrorReporting: false
+  
+  # Custom CSS styling
+  customCss: |
+    /* Custom styling for homelab dashboard */
+    :root {
+      --primary: #20E3B2;
+      --background: #0B1426;
+      --background-darker: #06101C;
+      --curve-factor: 10px;
+      --dimming-factor: 0.7;
+    }
+    
+    /* Service status indicators */
+    .status-check-icon {
+      transition: all 0.3s ease;
+    }
+    
+    .status-check-icon.status-success {
+      color: var(--success);
+      filter: drop-shadow(0 0 3px var(--success));
+    }
+    
+    .status-check-icon.status-error {
+      color: var(--danger);
+      filter: drop-shadow(0 0 3px var(--danger));
+    }
+    
+    /* Section headers */
+    .section-heading {
+      background: linear-gradient(135deg, var(--primary), var(--primary-darker));
+      border-radius: var(--curve-factor);
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    /* Item hover effects */
+    .item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(32, 227, 178, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    /* Search bar styling */
+    .search-container {
+      background: var(--background-darker);
+      border-radius: var(--curve-factor);
+      border: 1px solid var(--primary);
+    }
+    
+    /* Footer customization */
+    .footer {
+      background: var(--background-darker);
+      border-top: 1px solid var(--primary);
+    }
+
+# =============================================================================
+# SERVICE SECTIONS
+# =============================================================================
+sections:
+  # Infrastructure and Management
+  - name: Infrastructure & Management
+    icon: fas fa-server
+    displayData:
+      sortBy: alphabetical
+      rows: 2
+      cols: 4
+    items:
+      - title: Traefik Dashboard
+        description: Reverse proxy and SSL management
+        icon: hl-traefik
+        url: https://traefik.${DOMAIN}
+        target: newtab
+        id: 0_1_traefik
+        statusCheck: true
+        statusCheckUrl: https://traefik.${DOMAIN}/ping
+        statusCheckHeaders:
+          Accept: application/json
+        tags: [infrastructure, proxy, ssl]
+        
+      - title: Portainer
+        description: Docker container management
+        icon: hl-portainer
+        url: https://portainer.${DOMAIN}
+        target: newtab
+        id: 0_2_portainer
+        statusCheck: true
+        statusCheckUrl: https://portainer.${DOMAIN}/api/status
+        tags: [management, docker, containers]
+        
+      - title: Dashboard
+        description: This dashboard (Dashy)
+        icon: hl-dashy
+        url: https://dashboard.${DOMAIN}
+        target: sametab
+        id: 0_3_dashy
+        statusCheck: true
+        statusCheckUrl: https://dashboard.${DOMAIN}/
+        tags: [dashboard, navigation]
+        
+      - title: File Browser
+        description: Web-based file management
+        icon: hl-filebrowser
+        url: https://files.${DOMAIN}
+        target: newtab
+        id: 0_4_filebrowser
+        statusCheck: true
+        statusCheckUrl: https://files.${DOMAIN}/health
+        tags: [files, storage, management]
+
+  # Monitoring and Observability
+  - name: Monitoring & Observability
+    icon: fas fa-chart-line
+    displayData:
+      sortBy: alphabetical
+      rows: 1
+      cols: 3
+    items:
+      - title: Grafana
+        description: Metrics and logs visualization
+        icon: hl-grafana
+        url: https://grafana.${DOMAIN}
+        target: newtab
+        id: 1_1_grafana
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        statusCheckHeaders:
+          Accept: application/json
+        tags: [monitoring, metrics, dashboards]
+        
+      - title: Prometheus
+        description: Metrics collection and alerting
+        icon: hl-prometheus
+        url: https://prometheus.${DOMAIN}
+        target: newtab
+        id: 1_2_prometheus
+        statusCheck: true
+        statusCheckUrl: https://prometheus.${DOMAIN}/-/healthy
+        tags: [monitoring, metrics, alerting]
+        
+      - title: Loki Logs
+        description: Log aggregation (via Grafana)
+        icon: fas fa-file-alt
+        url: https://grafana.${DOMAIN}/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Loki%22,%7B%7D%5D
+        target: newtab
+        id: 1_3_loki
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        tags: [monitoring, logs, troubleshooting]
+
+  # Productivity Applications
+  - name: Productivity & Personal
+    icon: fas fa-tasks
+    displayData:
+      sortBy: alphabetical
+      rows: 1
+      cols: 2
+    items:
+      - title: Linkding
+        description: Bookmark manager with tagging
+        icon: hl-linkding
+        url: https://bookmarks.${DOMAIN}
+        target: newtab
+        id: 2_1_linkding
+        statusCheck: true
+        statusCheckUrl: https://bookmarks.${DOMAIN}/health
+        tags: [productivity, bookmarks, organization]
+        
+      - title: Actual Budget
+        description: Personal finance management
+        icon: hl-actual
+        url: https://budget.${DOMAIN}
+        target: newtab
+        id: 2_2_actual
+        statusCheck: true
+        statusCheckUrl: https://budget.${DOMAIN}/
+        tags: [productivity, finance, budgeting]
+
+  # Backup and Security
+  - name: Backup & Security
+    icon: fas fa-shield-alt
+    displayData:
+      sortBy: alphabetical
+      rows: 1
+      cols: 3
+    items:
+      - title: Duplicati
+        description: Automated backup solution
+        icon: hl-duplicati
+        url: https://backup.${DOMAIN}
+        target: newtab
+        id: 3_1_duplicati
+        statusCheck: true
+        statusCheckUrl: https://backup.${DOMAIN}/
+        tags: [backup, security, data-protection]
+        
+      - title: Tailscale Status
+        description: VPN network status (external)
+        icon: hl-tailscale
+        url: https://login.tailscale.com/admin/machines
+        target: newtab
+        id: 3_2_tailscale
+        statusCheck: false
+        tags: [security, vpn, remote-access]
+        
+      - title: Cloudflare Dashboard
+        description: Tunnel and DNS management (external)
+        icon: hl-cloudflare
+        url: https://dash.cloudflare.com/
+        target: newtab
+        id: 3_3_cloudflare
+        statusCheck: false
+        tags: [security, dns, tunnel]
+
+  # System Resources
+  - name: System Resources
+    icon: fas fa-microchip
+    displayData:
+      sortBy: alphabetical
+      rows: 1
+      cols: 3
+    items:
+      - title: System Metrics
+        description: Node exporter metrics (via Grafana)
+        icon: fas fa-server
+        url: https://grafana.${DOMAIN}/d/node-exporter/node-exporter-full?orgId=1&refresh=30s
+        target: newtab
+        id: 4_1_node_metrics
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        tags: [monitoring, system, hardware]
+        
+      - title: Container Metrics
+        description: Docker container metrics (via Grafana)
+        icon: fab fa-docker
+        url: https://grafana.${DOMAIN}/d/docker-containers/docker-containers?orgId=1&refresh=30s
+        target: newtab
+        id: 4_2_container_metrics
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        tags: [monitoring, docker, containers]
+        
+      - title: Infrastructure Overview
+        description: Complete infrastructure dashboard
+        icon: fas fa-tachometer-alt
+        url: https://grafana.${DOMAIN}/d/homelab-overview/homelab-overview?orgId=1&refresh=30s
+        target: newtab
+        id: 4_3_infrastructure_overview
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        tags: [monitoring, overview, infrastructure]
+
+  # Quick Actions
+  - name: Quick Actions
+    icon: fas fa-bolt
+    displayData:
+      sortBy: alphabetical
+      rows: 1
+      cols: 4
+    items:
+      - title: Restart All Services
+        description: Restart entire homelab stack
+        icon: fas fa-redo
+        url: "javascript:if(confirm('Restart all services?')) { window.open('https://portainer.${DOMAIN}', '_blank'); }"
+        target: modal
+        id: 5_1_restart_all
+        statusCheck: false
+        tags: [actions, management, restart]
+        
+      - title: Backup Now
+        description: Trigger immediate backup
+        icon: fas fa-download
+        url: https://backup.${DOMAIN}
+        target: newtab
+        id: 5_2_backup_now
+        statusCheck: true
+        statusCheckUrl: https://backup.${DOMAIN}/
+        tags: [actions, backup, immediate]
+        
+      - title: View Logs
+        description: Access centralized logs
+        icon: fas fa-list
+        url: https://grafana.${DOMAIN}/explore?orgId=1&left=%5B%22now-1h%22,%22now%22,%22Loki%22,%7B%22expr%22:%22%7Bcontainer_name%3D~%5C%22.%2B%5C%22%7D%22%7D%5D
+        target: newtab
+        id: 5_3_view_logs
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        tags: [actions, logs, troubleshooting]
+        
+      - title: System Health
+        description: Overall system health check
+        icon: fas fa-heartbeat
+        url: https://grafana.${DOMAIN}/d/homelab-overview/homelab-overview?orgId=1&refresh=30s&viewPanel=1
+        target: newtab
+        id: 5_4_system_health
+        statusCheck: true
+        statusCheckUrl: https://grafana.${DOMAIN}/api/health
+        tags: [actions, health, monitoring]

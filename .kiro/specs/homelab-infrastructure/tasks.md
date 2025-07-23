@@ -7,8 +7,6 @@
   - _Requirements: 1.1, 2.3_
 
 - [x] 2. Implement Traefik reverse proxy with SSL automation
-
-
   - Create Traefik static configuration with Let's Encrypt integration
   - Configure dynamic routing and SSL certificate management
   - Set up Docker provider for automatic service discovery
@@ -25,44 +23,31 @@
   - _Requirements: 1.1, 1.2_
 
 - [x] 3.2 Add service dependency management and health checks
-
-
   - Implement Docker health checks for all core services
   - Configure service startup ordering with depends_on
   - Add restart policies with exponential backoff
   - _Requirements: 1.4_
 
 - [x] 4. Implement monitoring stack (Prometheus, Grafana, Loki)
-
-
-
-
-
 - [x] 4.1 Create Prometheus configuration and service
-
-
   - Write Prometheus configuration for metrics collection
   - Configure service discovery for Docker containers
   - Set up node exporter and cAdvisor for system metrics
   - _Requirements: 4.1_
 
 - [x] 4.2 Implement Grafana with pre-configured dashboards
-
-
   - Create Grafana service with persistent data volume
   - Configure Prometheus and Loki as data sources
   - Provision infrastructure monitoring dashboards
   - _Requirements: 4.2_
 
 - [x] 4.3 Set up Loki and Promtail for log aggregation
-
-
   - Configure Loki for log storage and querying
   - Set up Promtail to collect Docker container logs
   - Integrate log collection with Grafana for unified observability
   - _Requirements: 4.3, 4.4_
 
-- [ ] 5. Create centralized dashboard service (Dashy)
+- [x] 5. Create centralized dashboard service (Dashy)
   - Configure Dashy with service definitions and health checks
   - Set up persistent configuration with volume mounts
   - Implement service status monitoring and navigation

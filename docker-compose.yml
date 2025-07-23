@@ -2,8 +2,6 @@
 # This file orchestrates the complete homelab infrastructure with proper networking,
 # service dependencies, and health checks
 
-version: '3.8'
-
 services:
   # =============================================================================
   # REVERSE PROXY AND SSL TERMINATION
@@ -348,7 +346,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.dashy.rule=Host(`dashboard.${DOMAIN}`) || Host(`${DOMAIN}`)"
+      - "traefik.http.routers.dashy.rule=Host(`dashboard.tia-lab.org`) || Host(`tia-lab.org`)"
       - "traefik.http.routers.dashy.entrypoints=websecure"
       - "traefik.http.routers.dashy.tls.certresolver=letsencrypt"
       - "traefik.http.services.dashy.loadbalancer.server.port=80"
@@ -412,8 +410,9 @@ services:
         condition: on-failure
         delay: 10s
         max_attempts: 3
-        window: 120s  # =
-============================================================================
+        window: 120s
+
+  # =============================================================================
   # FILE MANAGEMENT AND STORAGE
   # =============================================================================
   filebrowser:
