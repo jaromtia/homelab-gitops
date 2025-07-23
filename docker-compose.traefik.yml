@@ -1,0 +1,162 @@
+# Traefik Reverse Proxy Service Configuration
+# This file defines the Traefik service with SSL automation and service discovery
+
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    
+    # Security context
+    security_opt:
+      - no-new-privileges:true
+    
+    # Network configuration
+    networks:
+      - frontend
+      - backend
+    
+    # Port mappings
+    ports:
+      - "80:80"     # HTTP
+      - "443:443"   # HTTPS
+      - "8080:8080" # Dashboard (internal only)
+    
+    # Environment variables
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL}
+      - TRAEFIK_DASHBOARD_USER=${TRAEFIK_DASHBOARD_USER}
+      - TRAEFIK_DASHBOARD_PASSWORD_HASH=${TRAEFIK_DASHBOARD_PASSWORD_HASH}
+      - DOMAIN=${DOMAIN}
+    
+    # Volume mounts
+    volumes:
+      # Docker socket for service discovery
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Configuration files
+      - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
+      
+      # SSL certificates storage
+      - traefik_letsencrypt:/letsencrypt
+      
+      # Logs
+      - traefik_logs:/var/log/traefik
+      
+      # Default certificates (if needed)
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+      - /etc/ssl/private:/etc/ssl/private:ro
+    
+    # Labels for Traefik configuration
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+      
+      # Dashboard configuration
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-auth,security-headers"
+      
+      # API configuration
+      - "traefik.http.routers.traefik-api.rule=Host(`traefik.${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.traefik-api.entrypoints=websecure"
+      - "traefik.http.routers.traefik-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-api.service=api@internal"
+      - "traefik.http.routers.traefik-api.middlewares=traefik-auth,security-headers"
+      
+      # Ping endpoint for health checks
+      - "traefik.http.routers.traefik-ping.rule=Host(`traefik.${DOMAIN}`) && Path(`/ping`)"
+      - "traefik.http.routers.traefik-ping.entrypoints=websecure"
+      - "traefik.http.routers.traefik-ping.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-ping.service=ping@internal"
+      
+      # Metrics endpoint for Prometheus
+      - "traefik.http.routers.traefik-metrics.rule=Host(`traefik.${DOMAIN}`) && Path(`/metrics`)"
+      - "traefik.http.routers.traefik-metrics.entrypoints=websecure"
+      - "traefik.http.routers.traefik-metrics.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-metrics.service=prometheus@internal"
+      - "traefik.http.routers.traefik-metrics.middlewares=internal-whitelist"
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+
+  # Error pages service for custom error handling
+  error-pages:
+    image: tarampampam/error-pages:latest
+    container_name: error-pages
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+    
+    environment:
+      - TEMPLATE_NAME=ghost
+      - SHOW_DETAILS=false
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.error-pages.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.error-pages.priority=1"
+      - "traefik.http.routers.error-pages.entrypoints=websecure"
+      - "traefik.http.routers.error-pages.middlewares=security-headers"
+      - "traefik.http.services.error-pages.loadbalancer.server.port=8080"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+
+# Networks
+networks:
+  frontend:
+    name: homelab_frontend
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-172.20.0.0/16}
+  backend:
+    name: homelab_backend
+    driver: bridge
+    internal: true
+
+# Volumes
+volumes:
+  traefik_letsencrypt:
+    name: homelab_traefik_letsencrypt
+  traefik_logs:
+    name: homelab_traefik_logs
