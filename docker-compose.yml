@@ -1,0 +1,739 @@
+# Homelab Infrastructure - Main Docker Compose Configuration
+# This file orchestrates the complete homelab infrastructure with proper networking,
+# service dependencies, and health checks
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # REVERSE PROXY AND SSL TERMINATION
+  # =============================================================================
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    
+    security_opt:
+      - no-new-privileges:true
+    
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    
+    ports:
+      - "80:80"     # HTTP
+      - "443:443"   # HTTPS
+      - "8080:8080" # Dashboard (internal only)
+    
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL}
+      - TRAEFIK_DASHBOARD_USER=${TRAEFIK_DASHBOARD_USER}
+      - TRAEFIK_DASHBOARD_PASSWORD_HASH=${TRAEFIK_DASHBOARD_PASSWORD_HASH}
+      - DOMAIN=${DOMAIN}
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik_letsencrypt:/letsencrypt
+      - traefik_logs:/var/log/traefik
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-auth,security-headers"
+    
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 5
+        window: 300s
+
+  # =============================================================================
+  # MONITORING STACK
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    
+    networks:
+      - monitoring
+      - backend
+    
+    volumes:
+      - ./config/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 3
+        window: 180s
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+      - monitoring
+    
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN}
+    
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+        max_attempts: 3
+        window: 180s
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    
+    networks:
+      - monitoring
+    
+    volumes:
+      - ./config/loki:/etc/loki:ro
+      - loki_data:/loki
+    
+    command: -config.file=/etc/loki/loki.yml
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 180s
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    
+    networks:
+      - monitoring
+    
+    volumes:
+      - ./config/promtail:/etc/promtail:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    
+    command: -config.file=/etc/promtail/promtail.yml
+    
+    depends_on:
+      loki:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9080/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 180s
+
+  # =============================================================================
+  # DASHBOARD AND MANAGEMENT
+  # =============================================================================
+  dashy:
+    image: lissy93/dashy:latest
+    container_name: dashy
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+    
+    volumes:
+      - ./config/dashy/conf.yml:/app/public/conf.yml:ro
+      - dashy_data:/app/public
+    
+    environment:
+      - NODE_ENV=production
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.dashy.rule=Host(`dashboard.${DOMAIN}`) || Host(`${DOMAIN}`)"
+      - "traefik.http.routers.dashy.entrypoints=websecure"
+      - "traefik.http.routers.dashy.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashy.loadbalancer.server.port=80"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+      - backend
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s  # =
+============================================================================
+  # FILE MANAGEMENT AND STORAGE
+  # =============================================================================
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+    
+    volumes:
+      - ./data/files:/srv:rw
+      - filebrowser_data:/database
+      - ./config/filebrowser/filebrowser.json:/.filebrowser.json:ro
+    
+    environment:
+      - FB_DATABASE=/database/filebrowser.db
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.filebrowser.rule=Host(`files.${DOMAIN}`)"
+      - "traefik.http.routers.filebrowser.entrypoints=websecure"
+      - "traefik.http.routers.filebrowser.tls.certresolver=letsencrypt"
+      - "traefik.http.services.filebrowser.loadbalancer.server.port=80"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # =============================================================================
+  # PRODUCTIVITY APPLICATIONS
+  # =============================================================================
+  linkding:
+    image: sissbruecker/linkding:latest
+    container_name: linkding
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+      - backend
+    
+    volumes:
+      - linkding_data:/etc/linkding/data
+    
+    environment:
+      - LD_SUPERUSER_NAME=${LINKDING_SUPERUSER_NAME:-admin}
+      - LD_SUPERUSER_PASSWORD=${LINKDING_SUPERUSER_PASSWORD}
+      - LD_DISABLE_BACKGROUND_TASKS=False
+      - LD_DISABLE_URL_VALIDATION=False
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.linkding.rule=Host(`bookmarks.${DOMAIN}`)"
+      - "traefik.http.routers.linkding.entrypoints=websecure"
+      - "traefik.http.routers.linkding.tls.certresolver=letsencrypt"
+      - "traefik.http.services.linkding.loadbalancer.server.port=9090"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
+  actual:
+    image: actualbudget/actual-server:latest
+    container_name: actual
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+    
+    volumes:
+      - actual_data:/data
+    
+    environment:
+      - ACTUAL_PASSWORD=${ACTUAL_PASSWORD}
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.actual.rule=Host(`budget.${DOMAIN}`)"
+      - "traefik.http.routers.actual.entrypoints=websecure"
+      - "traefik.http.routers.actual.tls.certresolver=letsencrypt"
+      - "traefik.http.services.actual.loadbalancer.server.port=5006"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5006/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
+  # =============================================================================
+  # BACKUP SERVICES
+  # =============================================================================
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+      - backend
+    
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - CLI_ARGS=--webservice-interface=any --webservice-port=8200
+    
+    volumes:
+      - duplicati_data:/config
+      - ./data/backups:/backups
+      - ./data:/source/data:ro
+      - prometheus_data:/source/prometheus:ro
+      - grafana_data:/source/grafana:ro
+      - loki_data:/source/loki:ro
+      - portainer_data:/source/portainer:ro
+      - linkding_data:/source/linkding:ro
+      - actual_data:/source/actual:ro
+      - filebrowser_data:/source/filebrowser:ro
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+      portainer:
+        condition: service_healthy
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=homelab_frontend"
+      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN}`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      - "traefik.http.routers.duplicati.tls.certresolver=letsencrypt"
+      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8200/"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 3
+        window: 300s
+
+  # =============================================================================
+  # REMOTE ACCESS SERVICES
+  # =============================================================================
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    restart: unless-stopped
+    
+    network_mode: host
+    
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+      - TS_HOSTNAME=${TAILSCALE_HOSTNAME:-homelab}
+      - TS_STATE_DIR=/var/lib/tailscale
+    
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 3
+        window: 300s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    
+    networks:
+      - frontend
+    
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    
+    command: tunnel --no-autoupdate run
+    
+    depends_on:
+      traefik:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/ready"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 3
+        window: 300s
+
+# =============================================================================
+# NETWORKS CONFIGURATION
+# =============================================================================
+networks:
+  # Frontend network - Services accessible through Traefik
+  frontend:
+    name: homelab_frontend
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-172.20.0.0/16}
+    labels:
+      - "homelab.network.type=frontend"
+      - "homelab.network.description=Frontend services accessible via Traefik"
+
+  # Backend network - Internal service communication
+  backend:
+    name: homelab_backend
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+    labels:
+      - "homelab.network.type=backend"
+      - "homelab.network.description=Internal backend services communication"
+
+  # Monitoring network - Isolated monitoring stack
+  monitoring:
+    name: homelab_monitoring
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+    labels:
+      - "homelab.network.type=monitoring"
+      - "homelab.network.description=Monitoring stack isolation"
+
+# =============================================================================
+# VOLUMES CONFIGURATION
+# =============================================================================
+volumes:
+  # Traefik volumes
+  traefik_letsencrypt:
+    name: homelab_traefik_letsencrypt
+    labels:
+      - "homelab.volume.type=ssl"
+      - "homelab.volume.backup=critical"
+  
+  traefik_logs:
+    name: homelab_traefik_logs
+    labels:
+      - "homelab.volume.type=logs"
+      - "homelab.volume.backup=optional"
+
+  # Monitoring stack volumes
+  prometheus_data:
+    name: homelab_prometheus_data
+    labels:
+      - "homelab.volume.type=metrics"
+      - "homelab.volume.backup=important"
+  
+  grafana_data:
+    name: homelab_grafana_data
+    labels:
+      - "homelab.volume.type=config"
+      - "homelab.volume.backup=critical"
+  
+  loki_data:
+    name: homelab_loki_data
+    labels:
+      - "homelab.volume.type=logs"
+      - "homelab.volume.backup=optional"
+
+  # Application data volumes
+  portainer_data:
+    name: homelab_portainer_data
+    labels:
+      - "homelab.volume.type=config"
+      - "homelab.volume.backup=critical"
+  
+  dashy_data:
+    name: homelab_dashy_data
+    labels:
+      - "homelab.volume.type=config"
+      - "homelab.volume.backup=important"
+  
+  filebrowser_data:
+    name: homelab_filebrowser_data
+    labels:
+      - "homelab.volume.type=database"
+      - "homelab.volume.backup=critical"
+  
+  linkding_data:
+    name: homelab_linkding_data
+    labels:
+      - "homelab.volume.type=database"
+      - "homelab.volume.backup=critical"
+  
+  actual_data:
+    name: homelab_actual_data
+    labels:
+      - "homelab.volume.type=database"
+      - "homelab.volume.backup=critical"
+  
+  duplicati_data:
+    name: homelab_duplicati_data
+    labels:
+      - "homelab.volume.type=config"
+      - "homelab.volume.backup=critical"
+  
+  tailscale_data:
+    name: homelab_tailscale_data
+    labels:
+      - "homelab.volume.type=config"
+      - "homelab.volume.backup=important"
