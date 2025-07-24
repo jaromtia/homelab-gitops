@@ -30,14 +30,14 @@ This feature involves creating a comprehensive homelab infrastructure using Dock
 
 ### Requirement 3
 
-**User Story:** As a homelab administrator, I want automatic HTTPS and reverse proxy configuration, so that all services are securely accessible through friendly URLs.
+**User Story:** As a homelab administrator, I want secure external access through locally managed Cloudflare tunnels, so that all services are accessible remotely without exposing ports, managing SSL certificates, or requiring a reverse proxy.
 
 #### Acceptance Criteria
 
-1. WHEN services start THEN Traefik SHALL automatically generate SSL certificates for all services
-2. WHEN I access a service URL THEN the system SHALL redirect HTTP to HTTPS automatically
-3. WHEN I configure a new service THEN Traefik SHALL automatically detect and route traffic to it
-4. WHEN SSL certificates expire THEN the system SHALL automatically renew them
+1. WHEN services start THEN locally managed Cloudflare tunnel SHALL automatically provide secure HTTPS access to all services
+2. WHEN I access a service URL THEN the system SHALL route traffic directly through Cloudflare's secure tunnel to the service
+3. WHEN I configure a new service THEN the tunnel configuration SHALL be updated to route traffic directly to the service container
+4. WHEN tunnel configuration changes THEN the system SHALL automatically reload routing without requiring SSL management or reverse proxy configuration
 
 ### Requirement 4
 
@@ -74,17 +74,6 @@ This feature involves creating a comprehensive homelab infrastructure using Dock
 
 ### Requirement 7
 
-**User Story:** As a homelab administrator, I want secure remote access options, so that I can access my services from anywhere safely.
-
-#### Acceptance Criteria
-
-1. WHEN Tailscale is configured THEN the system SHALL provide VPN access to all services
-2. WHEN Cloudflared is configured THEN the system SHALL create secure tunnels for external access
-3. WHEN remote connections are established THEN the system SHALL maintain security policies
-4. WHEN unauthorized access is attempted THEN the system SHALL block and log the attempt
-
-### Requirement 8
-
 **User Story:** As a homelab administrator, I want file management and sharing capabilities, so that I can access and share files across my network.
 
 #### Acceptance Criteria
@@ -94,7 +83,7 @@ This feature involves creating a comprehensive homelab infrastructure using Dock
 3. WHEN I share files THEN the system SHALL generate secure sharing links
 4. WHEN I manage files THEN the system SHALL maintain proper permissions and access controls
 
-### Requirement 9
+### Requirement 8
 
 **User Story:** As a homelab administrator, I want productivity applications, so that I can manage personal tasks and bookmarks.
 
@@ -105,7 +94,7 @@ This feature involves creating a comprehensive homelab infrastructure using Dock
 3. WHEN I access Actual Budget THEN the system SHALL provide personal finance management
 4. WHEN I enter financial data THEN the system SHALL store it securely with backup integration
 
-### Requirement 10
+### Requirement 9
 
 **User Story:** As a homelab administrator, I want container management capabilities, so that I can monitor and control all services from a web interface.
 

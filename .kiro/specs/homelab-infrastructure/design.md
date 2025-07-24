@@ -2,7 +2,7 @@
 
 ## Overview
 
-The homelab infrastructure will be implemented as a containerized ecosystem using Docker Compose for orchestration, designed for easy deployment and recreation across different machines. The architecture follows a microservices approach where each service runs in its own container with proper networking, data persistence, and security configurations. The system uses Traefik as a reverse proxy for automatic HTTPS and service discovery, with a comprehensive monitoring stack (Prometheus, Grafana, Loki) for observability. All configurations are version-controlled through GitHub integration, enabling complete infrastructure-as-code deployment with automated backup and restoration capabilities.
+The homelab infrastructure will be implemented as a containerized ecosystem using Docker Compose for orchestration, designed for easy deployment and recreation across different machines. The architecture follows a microservices approach where each service runs in its own container with proper networking, data persistence, and security configurations. The system uses locally managed Cloudflare tunnels for secure external access, eliminating the need for reverse proxies, port forwarding, or SSL certificate management. A comprehensive monitoring stack (Prometheus, Grafana, Loki) provides observability, while all configurations are version-controlled through GitHub integration, enabling complete infrastructure-as-code deployment with automated backup and restoration capabilities.
 
 ## Architecture
 
@@ -11,22 +11,24 @@ The homelab infrastructure will be implemented as a containerized ecosystem usin
 ```mermaid
 graph TB
     Internet[Internet] --> CF[Cloudflare Tunnel]
-    Internet --> TS[Tailscale VPN]
     
-    CF --> Traefik[Traefik Reverse Proxy]
-    TS --> Traefik
-    
-    Traefik --> Dashy[Dashboard]
-    Traefik --> Portainer[Container Management]
-    Traefik --> Grafana[Monitoring Dashboard]
-    Traefik --> FileBrowser[File Management]
-    Traefik --> Linkding[Bookmark Manager]
-    Traefik --> Actual[Budget Manager]
-    Traefik --> Duplicati[Backup Service]
-    
-    Prometheus[Metrics Collection] --> Grafana
-    Loki[Log Aggregation] --> Grafana
-    Promtail[Log Collection] --> Loki
+    subgraph "Local Infrastructure"
+        CF --> Dashy[Dashboard :80]
+        CF --> Portainer[Container Management :9000]
+        CF --> Grafana[Monitoring Dashboard :3000]
+        CF --> FileBrowser[File Management :80]
+        CF --> Linkding[Bookmark Manager :9090]
+        CF --> Actual[Budget Manager :5006]
+        CF --> Duplicati[Backup Service :8200]
+        CF --> Prometheus[Metrics Collection :9090]
+        
+        Prometheus --> Grafana
+        Loki[Log Aggregation :3100] --> Grafana
+        Promtail[Log Collection] --> Loki
+        
+        NodeExporter[Node Exporter :9100] --> Prometheus
+        cAdvisor[cAdvisor :8080] --> Prometheus
+    end
     
     subgraph "Data Layer"
         Volumes[Docker Volumes]
@@ -40,23 +42,25 @@ graph TB
 
 ### Network Architecture
 
-- **Frontend Network**: Traefik-accessible services
-- **Backend Network**: Internal service communication
-- **Monitoring Network**: Observability stack isolation
-- **Host Network**: Services requiring host access (Tailscale, system monitoring)
+- **Frontend Network**: Services accessible through Cloudflare tunnel with direct container access
+- **Backend Network**: Internal service communication and data persistence
+- **Monitoring Network**: Observability stack isolation for metrics and logs
+- **Host Network**: Services requiring host access (system monitoring components)
 
 ## Components and Interfaces
 
 ### Core Infrastructure
 
-#### Traefik (Reverse Proxy & SSL)
-- **Purpose**: Automatic HTTPS, service discovery, load balancing
-- **Configuration**: File-based and Docker label discovery
-- **SSL**: Let's Encrypt automatic certificate generation
+#### Cloudflare Tunnel (Secure Access)
+- **Purpose**: Secure external access without reverse proxies, port forwarding, or SSL management
+- **Configuration**: Locally managed tunnel configuration with cloudflared daemon and config.yml
+- **Security**: Cloudflare's global network provides DDoS protection, SSL termination, and access policies
+- **Routing**: Direct service-to-tunnel routing without intermediate proxy layers
 - **Interfaces**: 
-  - HTTP/HTTPS (ports 80/443)
-  - Dashboard (port 8080)
-  - Docker socket for service discovery
+  - Tunnel daemon connects to Cloudflare edge network
+  - Local services accessible via custom domains through tunnel ingress rules
+  - No inbound ports required on firewall or router
+  - Full local control over tunnel configuration and credentials
 
 #### Docker Compose Orchestration
 - **Purpose**: Service definition, networking, volume management
@@ -130,10 +134,10 @@ graph TB
 - **Restoration**: Complete infrastructure recreation from GitHub repository
 
 #### Remote Access
-- **Tailscale**: Mesh VPN for secure remote access with device authentication
-- **Cloudflare Tunnel**: Public access without port forwarding, with access policies
-- **Configuration**: Environment-based authentication with secure credential management
-- **Security**: Multi-layered access control with VPN and tunnel-based access
+- **Cloudflare Tunnel**: Locally managed secure tunnels for external access without port forwarding
+- **Configuration**: Local tunnel configuration with cloudflared daemon and tunnel credentials
+- **Security**: Cloudflare's edge network provides DDoS protection and access policies
+- **Management**: Full control over tunnel configuration and routing rules
 
 ## Data Models
 
@@ -153,7 +157,7 @@ volumes:
 
 # Configuration Bind Mounts
 bind_mounts:
-  ./config/traefik:/etc/traefik:ro
+  ./config/cloudflared:/etc/cloudflared:ro
   ./config/prometheus:/etc/prometheus:ro
   ./config/grafana/provisioning:/etc/grafana/provisioning:ro
   ./config/loki:/etc/loki:ro
@@ -167,21 +171,21 @@ bind_mounts:
 ```
 homelab-infrastructure/
 ├── docker-compose.yml           # Main orchestration
-├── docker-compose.monitoring.yml # Monitoring stack
-├── docker-compose.apps.yml      # Application services
 ├── .env                         # Environment variables
 ├── config/
-│   ├── traefik/
-│   │   ├── traefik.yml         # Static configuration
-│   │   └── dynamic/            # Dynamic configuration
+│   ├── cloudflared/
+│   │   ├── config.yml          # Tunnel configuration
+│   │   └── credentials.json    # Tunnel credentials
 │   ├── prometheus/
 │   │   └── prometheus.yml      # Metrics collection config
 │   ├── grafana/
 │   │   └── provisioning/       # Dashboards and datasources
 │   ├── loki/
 │   │   └── loki.yml           # Log aggregation config
-│   └── promtail/
-│       └── promtail.yml       # Log collection config
+│   ├── promtail/
+│   │   └── promtail.yml       # Log collection config
+│   └── dashy/
+│       └── conf.yml           # Dashboard configuration
 ├── data/
 │   ├── files/                 # FileBrowser storage
 │   └── backups/              # Duplicati backup storage
@@ -209,9 +213,9 @@ homelab-infrastructure/
 - **Alert Rules**: Prometheus alerting for critical service failures
 
 ### Network Resilience
-- **SSL Certificate Renewal**: Automatic Let's Encrypt renewal
-- **Service Discovery**: Traefik automatic backend detection
-- **Fallback Access**: Multiple remote access methods (Tailscale, Cloudflare)
+- **Tunnel Management**: Cloudflare tunnel automatic reconnection and failover
+- **Service Discovery**: Direct container-to-container communication within Docker networks
+- **Secure Access**: Cloudflare tunnel provides encrypted access without exposed ports
 
 ## Testing Strategy
 
@@ -222,7 +226,7 @@ homelab-infrastructure/
 - **Backup Integrity**: Automated backup verification and test restores
 
 ### Integration Testing
-- **Service Discovery**: Traefik routing validation for all services
+- **Tunnel Connectivity**: Cloudflare tunnel routing validation for all services
 - **Authentication Flow**: Access control testing for secured services
 - **Data Persistence**: Volume mount and data retention validation
 - **Monitoring Pipeline**: End-to-end observability stack testing

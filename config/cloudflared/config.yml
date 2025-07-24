@@ -1,0 +1,49 @@
+# Cloudflare Tunnel Configuration
+# This file defines the locally managed tunnel configuration for secure external access
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress rules - direct service routing without reverse proxy
+ingress:
+  # Dashboard - Main entry point
+  - hostname: dashboard.${DOMAIN}
+    service: http://dashy:80
+  - hostname: ${DOMAIN}
+    service: http://dashy:80
+  
+  # Monitoring services
+  - hostname: grafana.${DOMAIN}
+    service: http://grafana:3000
+  - hostname: prometheus.${DOMAIN}
+    service: http://prometheus:9090
+  
+  # Management services
+  - hostname: portainer.${DOMAIN}
+    service: http://portainer:9000
+  - hostname: backup.${DOMAIN}
+    service: http://duplicati:8200
+  
+  # File management
+  - hostname: files.${DOMAIN}
+    service: http://filebrowser:80
+  
+  # Productivity applications
+  - hostname: bookmarks.${DOMAIN}
+    service: http://linkding:9090
+  - hostname: budget.${DOMAIN}
+    service: http://actual:5006
+  
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging configuration
+loglevel: info
+logfile: /var/log/cloudflared.log
+
+# Connection settings
+retries: 5
+grace-period: 30s
+
+# Metrics (optional - for monitoring tunnel health)
+metrics: 0.0.0.0:8080

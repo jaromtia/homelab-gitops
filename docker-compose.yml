@@ -1,69 +1,40 @@
-# Homelab Infrastructure - Main Docker Compose Configuration
-# This file orchestrates the complete homelab infrastructure with proper networking,
-# service dependencies, and health checks
+# Homelab Infrastructure - Docker Compose Configuration
+# This file orchestrates the complete homelab infrastructure with Cloudflare tunnel access,
+# proper networking, service dependencies, and health checks
 
 services:
   # =============================================================================
-  # REVERSE PROXY AND SSL TERMINATION
+  # SECURE EXTERNAL ACCESS
   # =============================================================================
-  traefik:
-    image: traefik:v3.0
-    container_name: traefik
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
     restart: unless-stopped
-    
-    security_opt:
-      - no-new-privileges:true
     
     networks:
       - frontend
-      - backend
-      - monitoring
-    
-    ports:
-      - "80:80"     # HTTP
-      - "443:443"   # HTTPS
-      - "8080:8080" # Dashboard (internal only)
-    
-    environment:
-      - ACME_EMAIL=${ACME_EMAIL}
-      - TRAEFIK_DASHBOARD_USER=${TRAEFIK_DASHBOARD_USER}
-      - TRAEFIK_DASHBOARD_PASSWORD_HASH=${TRAEFIK_DASHBOARD_PASSWORD_HASH}
-      - DOMAIN=${DOMAIN}
     
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
-      - traefik_letsencrypt:/letsencrypt
-      - traefik_logs:/var/log/traefik
+      - ./config/cloudflared:/etc/cloudflared:ro
     
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-auth,security-headers"
+    command: tunnel --config /etc/cloudflared/config.yml run
     
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: 30s
+      test: ["CMD-SHELL", "cloudflared tunnel info || exit 1"]
+      interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 30s
     
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: '0.5'
-        reservations:
           memory: 128M
-          cpus: '0.25'
+          cpus: '0.2'
       restart_policy:
         condition: on-failure
         delay: 30s
-        max_attempts: 5
+        max_attempts: 3
         window: 300s
 
   # =============================================================================
@@ -79,6 +50,9 @@ services:
       - monitoring
       - backend
     
+    ports:
+      - "9090:9090"
+    
     volumes:
       - ./config/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
@@ -92,18 +66,6 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
-      - "traefik.http.routers.prometheus.entrypoints=websecure"
-      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
-      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
@@ -132,6 +94,9 @@ services:
       - frontend
       - monitoring
     
+    ports:
+      - "3000:3000"
+    
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
@@ -141,14 +106,6 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     
     depends_on:
       prometheus:
@@ -181,6 +138,9 @@ services:
     
     networks:
       - monitoring
+    
+    ports:
+      - "3100:3100"
     
     volumes:
       - ./config/loki:/etc/loki:ro
@@ -253,6 +213,9 @@ services:
     networks:
       - monitoring
     
+    ports:
+      - "9100:9100"
+    
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -262,7 +225,7 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)'
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
@@ -290,6 +253,9 @@ services:
     
     networks:
       - monitoring
+    
+    ports:
+      - "8080:8080"
     
     volumes:
       - /:/rootfs:ro
@@ -332,24 +298,16 @@ services:
     networks:
       - frontend
     
+    ports:
+      - "80:80"
+    
     volumes:
       - ./config/dashy/conf.yml:/app/public/conf.yml:ro
       - dashy_data:/app/public
     
     environment:
       - NODE_ENV=production
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.dashy.rule=Host(`dashboard.tia-lab.org`) || Host(`tia-lab.org`)"
-      - "traefik.http.routers.dashy.entrypoints=websecure"
-      - "traefik.http.routers.dashy.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dashy.loadbalancer.server.port=80"
+      - NODE_OPTIONS=--max-old-space-size=4096
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
@@ -361,8 +319,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
-          cpus: '0.2'
+          memory: 512M
+          cpus: '0.5'
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -378,21 +336,12 @@ services:
       - frontend
       - backend
     
+    ports:
+      - "9000:9000"
+    
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
-      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9000/api/status"]
@@ -423,6 +372,9 @@ services:
     networks:
       - frontend
     
+    ports:
+      - "8081:80"
+    
     volumes:
       - ./data/files:/srv:rw
       - filebrowser_data:/database
@@ -430,18 +382,6 @@ services:
     
     environment:
       - FB_DATABASE=/database/filebrowser.db
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.filebrowser.rule=Host(`files.${DOMAIN}`)"
-      - "traefik.http.routers.filebrowser.entrypoints=websecure"
-      - "traefik.http.routers.filebrowser.tls.certresolver=letsencrypt"
-      - "traefik.http.services.filebrowser.loadbalancer.server.port=80"
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
@@ -473,6 +413,9 @@ services:
       - frontend
       - backend
     
+    ports:
+      - "9090:9090"
+    
     volumes:
       - linkding_data:/etc/linkding/data
     
@@ -481,18 +424,6 @@ services:
       - LD_SUPERUSER_PASSWORD=${LINKDING_SUPERUSER_PASSWORD}
       - LD_DISABLE_BACKGROUND_TASKS=False
       - LD_DISABLE_URL_VALIDATION=False
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.linkding.rule=Host(`bookmarks.${DOMAIN}`)"
-      - "traefik.http.routers.linkding.entrypoints=websecure"
-      - "traefik.http.routers.linkding.tls.certresolver=letsencrypt"
-      - "traefik.http.services.linkding.loadbalancer.server.port=9090"
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/health"]
@@ -520,23 +451,14 @@ services:
     networks:
       - frontend
     
+    ports:
+      - "5006:5006"
+    
     volumes:
       - actual_data:/data
     
     environment:
       - ACTUAL_PASSWORD=${ACTUAL_PASSWORD}
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.actual.rule=Host(`budget.${DOMAIN}`)"
-      - "traefik.http.routers.actual.entrypoints=websecure"
-      - "traefik.http.routers.actual.tls.certresolver=letsencrypt"
-      - "traefik.http.services.actual.loadbalancer.server.port=5006"
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5006/"]
@@ -568,6 +490,9 @@ services:
       - frontend
       - backend
     
+    ports:
+      - "8200:8200"
+    
     environment:
       - PUID=1000
       - PGID=1000
@@ -587,22 +512,12 @@ services:
       - filebrowser_data:/source/filebrowser:ro
     
     depends_on:
-      traefik:
-        condition: service_healthy
       prometheus:
         condition: service_healthy
       grafana:
         condition: service_healthy
       portainer:
         condition: service_healthy
-    
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=homelab_frontend"
-      - "traefik.http.routers.duplicati.rule=Host(`backup.${DOMAIN}`)"
-      - "traefik.http.routers.duplicati.entrypoints=websecure"
-      - "traefik.http.routers.duplicati.tls.certresolver=letsencrypt"
-      - "traefik.http.services.duplicati.loadbalancer.server.port=8200"
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8200/"]
@@ -622,87 +537,11 @@ services:
         max_attempts: 3
         window: 300s
 
-  # =============================================================================
-  # REMOTE ACCESS SERVICES
-  # =============================================================================
-  tailscale:
-    image: tailscale/tailscale:latest
-    container_name: tailscale
-    restart: unless-stopped
-    
-    network_mode: host
-    
-    environment:
-      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
-      - TS_HOSTNAME=${TAILSCALE_HOSTNAME:-homelab}
-      - TS_STATE_DIR=/var/lib/tailscale
-    
-    volumes:
-      - tailscale_data:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
-    
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    
-    healthcheck:
-      test: ["CMD", "tailscale", "status"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-          cpus: '0.2'
-      restart_policy:
-        condition: on-failure
-        delay: 30s
-        max_attempts: 3
-        window: 300s
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    restart: unless-stopped
-    
-    networks:
-      - frontend
-    
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
-    
-    command: tunnel --no-autoupdate run
-    
-    depends_on:
-      traefik:
-        condition: service_healthy
-    
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/ready"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-          cpus: '0.2'
-      restart_policy:
-        condition: on-failure
-        delay: 30s
-        max_attempts: 3
-        window: 300s
-
 # =============================================================================
 # NETWORKS CONFIGURATION
 # =============================================================================
 networks:
-  # Frontend network - Services accessible through Traefik
+  # Frontend network - Services accessible through Cloudflare tunnel
   frontend:
     name: homelab_frontend
     driver: bridge
@@ -711,7 +550,7 @@ networks:
         - subnet: ${DOCKER_SUBNET:-172.20.0.0/16}
     labels:
       - "homelab.network.type=frontend"
-      - "homelab.network.description=Frontend services accessible via Traefik"
+      - "homelab.network.description=Frontend services accessible via Cloudflare tunnel"
 
   # Backend network - Internal service communication
   backend:
@@ -741,19 +580,6 @@ networks:
 # VOLUMES CONFIGURATION
 # =============================================================================
 volumes:
-  # Traefik volumes
-  traefik_letsencrypt:
-    name: homelab_traefik_letsencrypt
-    labels:
-      - "homelab.volume.type=ssl"
-      - "homelab.volume.backup=critical"
-  
-  traefik_logs:
-    name: homelab_traefik_logs
-    labels:
-      - "homelab.volume.type=logs"
-      - "homelab.volume.backup=optional"
-
   # Monitoring stack volumes
   prometheus_data:
     name: homelab_prometheus_data
@@ -809,9 +635,3 @@ volumes:
     labels:
       - "homelab.volume.type=config"
       - "homelab.volume.backup=critical"
-  
-  tailscale_data:
-    name: homelab_tailscale_data
-    labels:
-      - "homelab.volume.type=config"
-      - "homelab.volume.backup=important"

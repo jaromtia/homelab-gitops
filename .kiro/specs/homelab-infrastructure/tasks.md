@@ -1,24 +1,28 @@
 # Implementation Plan
 
 - [x] 1. Set up project structure and core configuration files
+
+
+
+
   - Create directory structure for config, data, and scripts
   - Initialize environment configuration template with all required variables
   - Create base .gitignore for sensitive files and data directories
   - _Requirements: 1.1, 2.3_
 
-- [x] 2. Implement Traefik reverse proxy with SSL automation
-  - Create Traefik static configuration with Let's Encrypt integration
-  - Configure dynamic routing and SSL certificate management
-  - Set up Docker provider for automatic service discovery
-  - Write health checks and error handling for SSL certificate renewal
+- [ ] 2. Implement locally managed Cloudflare tunnel for secure external access
+  - Create cloudflared service configuration with local tunnel management
+  - Set up tunnel credentials and config.yml for direct service routing
+  - Configure ingress rules for all services without reverse proxy
+  - Write health checks and automatic reconnection handling
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
 - [x] 3. Create core Docker Compose infrastructure
 
  12q 06
-- [x] 3.1 Implement main Docker Compose file with networking
+- [ ] 3.1 Implement main Docker Compose file with networking
   - Define isolated networks for frontend, backend, and monitoring
-  - Configure Traefik service with proper port mappings and volumes
+  - Configure Cloudflare tunnel service with proper configuration volumes
   - Set up shared volumes and network configurations
   - _Requirements: 1.1, 1.2_
 
@@ -67,73 +71,60 @@
   - Create backup restoration interface and procedures
   - _Requirements: 6.2, 6.3, 6.4_
 
-- [ ] 7. Set up secure remote access solutions
-- [ ] 7.1 Implement Tailscale VPN integration
-  - Configure Tailscale service with device authentication
-  - Set up secure VPN access to all internal services
-  - Implement proper network routing and security policies
-  - _Requirements: 7.1, 7.3_
-
-- [ ] 7.2 Configure Cloudflare Tunnel for external access
-  - Set up Cloudflared service with tunnel configuration
-  - Configure secure external access with access policies
-  - Implement unauthorized access blocking and logging
-  - _Requirements: 7.2, 7.4_
-
-- [ ] 8. Create file management service (FileBrowser)
+- [ ] 7. Create file management service (FileBrowser)
   - Configure FileBrowser with persistent storage volumes
   - Set up web-based file management interface
   - Implement file sharing with secure link generation
   - Configure user permissions and access controls
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 9. Implement productivity applications
-- [ ] 9.1 Set up Linkding bookmark manager
+- [ ] 8. Implement productivity applications
+- [ ] 8.1 Set up Linkding bookmark manager
   - Configure Linkding service with persistent database
   - Set up bookmark management with tagging and search
   - Implement data persistence and backup integration
-  - _Requirements: 9.1, 9.2_
+  - _Requirements: 8.1, 8.2_
 
-- [ ] 9.2 Configure Actual Budget personal finance manager
+- [ ] 8.2 Configure Actual Budget personal finance manager
   - Set up Actual Budget service with secure data storage
   - Configure personal finance management interface
   - Integrate with backup system for financial data protection
-  - _Requirements: 9.3, 9.4_
+  - _Requirements: 8.3, 8.4_
 
-- [ ] 10. Create container management interface (Portainer)
+- [ ] 9. Create container management interface (Portainer)
   - Configure Portainer with Docker socket access
   - Set up container monitoring and control capabilities
   - Implement real-time log viewing and resource monitoring
   - Configure container restart and management features
-  - _Requirements: 10.1, 10.2, 10.3, 10.4_
+  - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 11. Implement GitHub integration and deployment automation
-- [ ] 11.1 Create deployment scripts and automation
+- [ ] 10. Implement GitHub integration and deployment automation
+- [ ] 10.1 Create deployment scripts and automation
   - Write deployment script for single-command setup
   - Create automatic directory and configuration file generation
   - Implement environment validation and error handling
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 11.2 Set up GitHub repository integration
+- [ ] 10.2 Set up GitHub repository integration
   - Configure Git repository for configuration management
   - Create scripts for pushing configuration changes to GitHub
   - Implement automated configuration restoration from repository
   - _Requirements: 2.2, 2.3_
 
-- [ ] 12. Create comprehensive testing and validation
-- [ ] 12.1 Implement service health and connectivity testing
+- [ ] 11. Create comprehensive testing and validation
+- [ ] 11.1 Implement service health and connectivity testing
   - Create automated health check validation for all services
   - Write network connectivity tests between services
-  - Implement SSL certificate validation and monitoring
-  - Test service discovery and Traefik routing for all services
+  - Implement Cloudflare tunnel connectivity validation
+  - Test direct service routing through tunnel for all services
 
-- [ ] 12.2 Add backup and deployment testing
+- [ ] 11.2 Add backup and deployment testing
   - Create backup integrity verification tests
   - Implement full backup/restore cycle validation
   - Write fresh deployment testing on clean systems
   - Test configuration validation and service startup sequences
 
-- [ ] 13. Finalize documentation and operational procedures
+- [ ] 12. Finalize documentation and operational procedures
   - Create comprehensive deployment documentation
   - Write troubleshooting guides for common issues
   - Document backup and restoration procedures

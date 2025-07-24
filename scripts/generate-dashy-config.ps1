@@ -44,7 +44,6 @@ $config | Out-File -FilePath $OutputFile -Encoding UTF8
 Write-Host "Dashy configuration generated successfully at $OutputFile" -ForegroundColor Green
 Write-Host "Services will be accessible at:" -ForegroundColor Cyan
 Write-Host "  - Dashboard: https://dashboard.$domain or https://$domain" -ForegroundColor White
-Write-Host "  - Traefik: https://traefik.$domain" -ForegroundColor White
 Write-Host "  - Grafana: https://grafana.$domain" -ForegroundColor White
 Write-Host "  - Prometheus: https://prometheus.$domain" -ForegroundColor White
 Write-Host "  - Portainer: https://portainer.$domain" -ForegroundColor White

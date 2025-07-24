@@ -106,6 +106,9 @@ Thumbs.db
 *.crt
 *.csr
 
+# Cloudflare tunnel credentials
+config/cloudflared/credentials.json
+
 # Backup files
 *.bak
 *.backup
