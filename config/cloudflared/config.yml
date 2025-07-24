@@ -1,49 +1,130 @@
 # Cloudflare Tunnel Configuration
 # This file defines the locally managed tunnel configuration for secure external access
+# with automatic reconnection, health monitoring, and direct service routing
 
 tunnel: YOUR_TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 
 # Ingress rules - direct service routing without reverse proxy
+# Each service is directly accessible through Cloudflare's global network
 ingress:
-  # Dashboard - Main entry point
+  # Dashboard - Main entry point (primary and www subdomain)
   - hostname: dashboard.${DOMAIN}
     service: http://dashy:80
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
   - hostname: ${DOMAIN}
     service: http://dashy:80
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
   
-  # Monitoring services
+  # Monitoring services with health check integration
   - hostname: grafana.${DOMAIN}
     service: http://grafana:3000
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
+      httpHostHeader: grafana.${DOMAIN}
   - hostname: prometheus.${DOMAIN}
     service: http://prometheus:9090
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
   
   # Management services
   - hostname: portainer.${DOMAIN}
     service: http://portainer:9000
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
   - hostname: backup.${DOMAIN}
     service: http://duplicati:8200
+    originRequest:
+      connectTimeout: 45s
+      tlsTimeout: 15s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 5
+      keepAliveTimeout: 120s
   
-  # File management
+  # File management with extended timeouts for large file operations
   - hostname: files.${DOMAIN}
     service: http://filebrowser:80
+    originRequest:
+      connectTimeout: 60s
+      tlsTimeout: 15s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 5
+      keepAliveTimeout: 300s
+      noTLSVerify: false
   
   # Productivity applications
   - hostname: bookmarks.${DOMAIN}
     service: http://linkding:9090
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
   - hostname: budget.${DOMAIN}
     service: http://actual:5006
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
   
-  # Catch-all rule (required)
+  # Catch-all rule (required) - returns 404 for unmatched hostnames
   - service: http_status:404
 
-# Logging configuration
+# Logging configuration for debugging and monitoring
 loglevel: info
 logfile: /var/log/cloudflared.log
+log-level: info
 
-# Connection settings
-retries: 5
+# Connection settings for reliability and automatic reconnection
+retries: 10
 grace-period: 30s
+heartbeat-interval: 5s
+heartbeat-count: 5
 
-# Metrics (optional - for monitoring tunnel health)
+# Protocol settings for optimal performance
+protocol: quic
+
+# Metrics endpoint for health monitoring and observability
 metrics: 0.0.0.0:8080
+
+# Auto-update settings (disabled for stability in production)
+no-autoupdate: true
+
+# Connection pool settings for better performance
+max-upstream-conns: 10
+
+# Edge connection settings
+edge-ip-version: auto
+
+# Proxy settings (if needed behind corporate firewall)
+# proxy-address: ""
+# proxy-port: 0
+# proxy-type: ""
+
+# Post-quantum cryptography (future-proofing)
+post-quantum: true

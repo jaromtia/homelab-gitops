@@ -78,6 +78,14 @@ scrape_configs:
     scrape_interval: 60s
     metrics_path: /metrics
 
+  # Cloudflare Tunnel metrics
+  - job_name: 'cloudflared'
+    static_configs:
+      - targets: ['cloudflared:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
   # Docker service discovery for containers with prometheus labels
   - job_name: 'docker-containers'
     docker_sd_configs:
@@ -115,12 +123,8 @@ scrape_configs:
         target_label: project
 
 # Storage configuration
-storage:
-  tsdb:
-    path: /prometheus
-    retention.time: 15d
-    retention.size: 10GB
-    wal-compression: true
+# Note: These are command-line flags, not YAML config
+# They are set in the docker-compose.yml file
 
 # Remote write configuration (optional - for external storage)
 # remote_write:
