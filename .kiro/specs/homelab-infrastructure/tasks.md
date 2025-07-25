@@ -45,7 +45,11 @@
   - Add restart policies with exponential backoff
   - _Requirements: 1.4_
 
-- [x] 4. Implement monitoring stack (Prometheus, Grafana, Loki)
+- [ ] 4. Implement monitoring stack (Prometheus, Grafana, Loki)
+
+
+
+
 - [x] 4.1 Create Prometheus configuration and service
   - Write Prometheus configuration for metrics collection
   - Configure service discovery for Docker containers

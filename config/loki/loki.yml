@@ -54,20 +54,21 @@ analytics:
   reporting_enabled: false
 
 limits_config:
-  enforce_metric_name: false
+  allow_structured_metadata: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h
   max_cache_freshness_per_query: 10m
   split_queries_by_interval: 15m
-  ingestion_rate_mb: 8
-  ingestion_burst_size_mb: 16
-  per_stream_rate_limit: 3MB
-  per_stream_rate_limit_burst: 15MB
-  max_streams_per_user: 10000
-  max_line_size: 256000
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+  per_stream_rate_limit: 5MB
+  per_stream_rate_limit_burst: 25MB
+  max_streams_per_user: 50000
+  max_line_size: 512000
+  max_entries_limit_per_query: 10000
+  max_query_series: 10000
 
-chunk_store_config:
-  max_look_back_period: 0s
+chunk_store_config: {}
 
 table_manager:
   retention_deletes_enabled: false
@@ -75,11 +76,11 @@ table_manager:
 
 compactor:
   working_directory: /loki
-  shared_store: filesystem
   compaction_interval: 10m
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 ingester:
   max_chunk_age: 1h
@@ -87,7 +88,6 @@ ingester:
   chunk_block_size: 262144
   chunk_target_size: 1048576
   chunk_retain_period: 30s
-  max_transfer_retries: 0
   wal:
     enabled: true
     dir: /loki/wal

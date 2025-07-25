@@ -1,0 +1,81 @@
+# Simple Dashy Configuration for Homelab Infrastructure
+# Minimal configuration to avoid build issues
+
+pageInfo:
+  title: Homelab Dashboard
+  description: Centralized homelab services
+  footerText: 'Homelab Infrastructure'
+
+appConfig:
+  theme: colorful
+  layout: auto
+  iconSize: medium
+  language: en
+  statusCheck: true
+  statusCheckInterval: 60
+  enableFontAwesome: true
+  hideComponents:
+    hideHeading: false
+    hideNav: false
+    hideSearch: false
+    hideSettings: false
+    hideFooter: false
+
+sections:
+  - name: Infrastructure
+    icon: fas fa-server
+    items:
+      - title: Portainer
+        description: Container Management
+        icon: hl-portainer
+        url: http://localhost:9000
+        target: newtab
+        statusCheck: true
+        
+      - title: Homer Dashboard
+        description: Alternative Dashboard
+        icon: hl-homer
+        url: http://localhost:80
+        target: newtab
+        statusCheck: true
+
+  - name: Monitoring
+    icon: fas fa-chart-line
+    items:
+      - title: Grafana
+        description: Metrics & Dashboards
+        icon: hl-grafana
+        url: http://localhost:3000
+        target: newtab
+        statusCheck: true
+        
+      - title: Prometheus
+        description: Metrics Collection
+        icon: hl-prometheus
+        url: http://localhost:9090
+        target: newtab
+        statusCheck: true
+
+  - name: Applications
+    icon: fas fa-apps
+    items:
+      - title: File Browser
+        description: File Management
+        icon: hl-filebrowser
+        url: http://localhost:8082
+        target: newtab
+        statusCheck: true
+        
+      - title: Linkding
+        description: Bookmark Manager
+        icon: hl-linkding
+        url: http://localhost:9091
+        target: newtab
+        statusCheck: true
+        
+      - title: Actual Budget
+        description: Personal Finance
+        icon: hl-actual
+        url: http://localhost:5006
+        target: newtab
+        statusCheck: true
