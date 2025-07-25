@@ -35,7 +35,6 @@
 
 - [x] 4. Implement monitoring stack (Prometheus, Grafana, Loki)
 
-
 - [x] 4.1 Create Prometheus configuration and service
 
   - Write Prometheus configuration for metrics collection
@@ -68,18 +67,21 @@
 - [x] 6. Implement automated backup system (Duplicati)
 
 - [x] 6.1 Create Duplicati service with backup scheduling
+
   - Configure Duplicati with persistent data and backup storage
   - Set up automated backup schedules for critical volumes
   - Configure backup encryption and deduplication settings
   - _Requirements: 6.1_
 
 - [x] 6.2 Add backup verification and retention policies
+
   - Implement automated backup integrity verification
   - Configure backup rotation and retention policies
   - Create backup restoration interface and procedures
   - _Requirements: 6.2, 6.3, 6.4_
 
-- [ ] 7. Create file management service (FileBrowser)
+
+- [x] 7. Create file management service (FileBrowser)
 
   - Configure FileBrowser with persistent storage volumes
   - Set up web-based file management interface

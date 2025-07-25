@@ -1,0 +1,117 @@
+{
+  "security": {
+    "maxFileSize": "100MB",
+    "allowedExtensions": [
+      ".txt", ".md", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+      ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp",
+      ".mp3", ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv",
+      ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2",
+      ".json", ".xml", ".csv", ".log", ".conf", ".cfg", ".ini",
+      ".html", ".css", ".js", ".ts", ".py", ".java", ".cpp", ".c", ".h",
+      ".sh", ".bat", ".ps1", ".sql"
+    ],
+    "blockedExtensions": [
+      ".exe", ".msi", ".bat", ".cmd", ".com", ".pif", ".scr", ".vbs", ".js",
+      ".jar", ".app", ".deb", ".rpm", ".dmg", ".pkg", ".run"
+    ],
+    "scanUploads": true,
+    "quarantineDirectory": "/srv/.quarantine",
+    "maxConcurrentUploads": 5,
+    "uploadTimeout": "300s"
+  },
+  "sharing": {
+    "enabled": true,
+    "defaultExpiration": "7d",
+    "maxExpiration": "30d",
+    "allowPublicShares": true,
+    "requireAuthentication": false,
+    "allowPasswordProtection": true,
+    "maxDownloads": 100,
+    "trackDownloads": true,
+    "allowDirectLinks": true,
+    "shareUrlPrefix": "https://files.${DOMAIN}/share/",
+    "notificationEmail": "",
+    "shareTemplates": {
+      "public": {
+        "description": "Public share accessible to anyone with the link",
+        "permissions": ["download"],
+        "expiration": "7d",
+        "passwordProtected": false
+      },
+      "private": {
+        "description": "Private share requiring authentication",
+        "permissions": ["download"],
+        "expiration": "24h",
+        "passwordProtected": true
+      },
+      "collaboration": {
+        "description": "Collaborative share allowing uploads",
+        "permissions": ["download", "upload"],
+        "expiration": "7d",
+        "passwordProtected": true
+      }
+    }
+  },
+  "userManagement": {
+    "defaultQuota": "1GB",
+    "maxQuota": "10GB",
+    "allowSelfRegistration": false,
+    "requireEmailVerification": false,
+    "passwordPolicy": {
+      "minLength": 8,
+      "requireUppercase": true,
+      "requireLowercase": true,
+      "requireNumbers": true,
+      "requireSpecialChars": false
+    },
+    "sessionTimeout": "24h",
+    "maxConcurrentSessions": 3,
+    "lockoutPolicy": {
+      "enabled": true,
+      "maxAttempts": 5,
+      "lockoutDuration": "15m"
+    }
+  },
+  "audit": {
+    "enabled": true,
+    "logFile": "/var/log/filebrowser-audit.log",
+    "logLevel": "info",
+    "trackActions": [
+      "login", "logout", "upload", "download", "delete", "rename", "move",
+      "share_create", "share_access", "share_delete", "user_create", "user_delete"
+    ],
+    "retentionDays": 90
+  },
+  "backup": {
+    "enabled": true,
+    "schedule": "0 2 * * *",
+    "destination": "/backups/filebrowser",
+    "retention": "30d",
+    "includeDatabase": true,
+    "includeUserFiles": false,
+    "compression": true
+  },
+  "monitoring": {
+    "healthCheck": {
+      "enabled": true,
+      "endpoint": "/health",
+      "interval": "30s"
+    },
+    "metrics": {
+      "enabled": true,
+      "endpoint": "/metrics",
+      "prometheus": true
+    },
+    "alerts": {
+      "diskUsage": {
+        "threshold": "90%",
+        "action": "email"
+      },
+      "failedLogins": {
+        "threshold": 10,
+        "timeWindow": "5m",
+        "action": "email"
+      }
+    }
+  }
+}

@@ -6,5 +6,83 @@
   "database": "/database/filebrowser.db",
   "root": "/srv",
   "username": "admin",
-  "password": ""
+  "password": "",
+  "auth": {
+    "method": "json",
+    "header": ""
+  },
+  "signup": false,
+  "createUserDir": true,
+  "defaults": {
+    "scope": "/srv",
+    "locale": "en",
+    "viewMode": "list",
+    "singleClick": false,
+    "sorting": {
+      "by": "name",
+      "asc": true
+    },
+    "perm": {
+      "admin": false,
+      "execute": true,
+      "create": true,
+      "rename": true,
+      "modify": true,
+      "delete": true,
+      "share": true,
+      "download": true
+    },
+    "commands": [
+      "git",
+      "svn"
+    ],
+    "hideDotfiles": false,
+    "dateFormat": false
+  },
+  "settings": {
+    "signup": false,
+    "createUserDir": true,
+    "userHomeBasePath": "/srv/users",
+    "defaults": {
+      "scope": "/srv",
+      "locale": "en",
+      "viewMode": "list",
+      "singleClick": false,
+      "sorting": {
+        "by": "name",
+        "asc": true
+      },
+      "perm": {
+        "admin": false,
+        "execute": true,
+        "create": true,
+        "rename": true,
+        "modify": true,
+        "delete": true,
+        "share": true,
+        "download": true
+      },
+      "commands": [
+        "git",
+        "svn"
+      ],
+      "hideDotfiles": false,
+      "dateFormat": false
+    }
+  },
+  "branding": {
+    "name": "Homelab File Manager",
+    "disableExternal": false,
+    "files": "/srv",
+    "theme": "auto"
+  },
+  "commands": {
+    "after_upload": [],
+    "before_save": [],
+    "after_save": []
+  },
+  "shell": [
+    "sh",
+    "-c"
+  ]
 }
