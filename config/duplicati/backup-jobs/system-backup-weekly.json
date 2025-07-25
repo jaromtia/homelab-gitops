@@ -1,0 +1,53 @@
+{
+  "backup-job": {
+    "name": "System Backup Configuration Weekly",
+    "description": "Weekly backup of Duplicati configuration and backup metadata",
+    "schedule": "0 4 * * 0",
+    "enabled": true,
+    "target": {
+      "type": "file",
+      "path": "/backups/system-weekly",
+      "options": {
+        "alternate-destination-marker": "DUPLICATI",
+        "alternate-target-paths": "/backups/system-weekly-alt"
+      }
+    },
+    "source-paths": [
+      "/config"
+    ],
+    "filters": [
+      "-*.tmp",
+      "-*.log",
+      "-*~",
+      "-*.lock",
+      "-Duplicati-server.sqlite-wal",
+      "-Duplicati-server.sqlite-shm"
+    ],
+    "options": {
+      "encryption-module": "aes",
+      "passphrase": "${DUPLICATI_PASSWORD}",
+      "compression-module": "zip",
+      "zip-compression-level": 9,
+      "dblock-size": "10mb",
+      "keep-versions": "0",
+      "retention-policy": "4W:1W,12M:1M,5Y:1Y",
+      "upload-verification-file": true,
+      "auto-cleanup": true,
+      "auto-compact": true,
+      "backup-test-samples": 1,
+      "backup-test-percentage": 0.1,
+      "thread-priority": "BelowNormal",
+      "asynchronous-concurrent-upload-limit": 1,
+      "asynchronous-concurrent-download-limit": 1,
+      "synchronous-upload": false,
+      "quota-size": "5GB"
+    },
+    "metadata": {
+      "backup-type": "system",
+      "frequency": "weekly",
+      "priority": "medium",
+      "created": "2025-01-25T00:00:00Z",
+      "version": "1.0"
+    }
+  }
+}

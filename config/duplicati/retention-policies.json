@@ -1,0 +1,161 @@
+{
+  "retention-policies": {
+    "critical-data-daily": {
+      "policy-name": "Critical Data Retention",
+      "description": "Retention policy for critical application data with frequent access needs",
+      "schedule-type": "daily",
+      "retention-rules": {
+        "keep-daily": {
+          "period": "1W",
+          "interval": "1D",
+          "description": "Keep daily backups for 1 week"
+        },
+        "keep-weekly": {
+          "period": "4W", 
+          "interval": "1W",
+          "description": "Keep weekly backups for 4 weeks"
+        },
+        "keep-monthly": {
+          "period": "12M",
+          "interval": "1M", 
+          "description": "Keep monthly backups for 12 months"
+        }
+      },
+      "cleanup-settings": {
+        "auto-cleanup": true,
+        "cleanup-frequency": "daily",
+        "verify-before-delete": true,
+        "keep-minimum-versions": 3
+      },
+      "storage-limits": {
+        "max-backup-size": "10GB",
+        "warning-threshold": "8GB",
+        "critical-threshold": "9.5GB"
+      }
+    },
+    
+    "config-files-daily": {
+      "policy-name": "Configuration Files Retention",
+      "description": "Retention policy for service configuration files",
+      "schedule-type": "daily",
+      "retention-rules": {
+        "keep-daily": {
+          "period": "2W",
+          "interval": "1D",
+          "description": "Keep daily backups for 2 weeks"
+        },
+        "keep-weekly": {
+          "period": "8W",
+          "interval": "1W", 
+          "description": "Keep weekly backups for 8 weeks"
+        },
+        "keep-monthly": {
+          "period": "24M",
+          "interval": "1M",
+          "description": "Keep monthly backups for 24 months"
+        }
+      },
+      "cleanup-settings": {
+        "auto-cleanup": true,
+        "cleanup-frequency": "weekly",
+        "verify-before-delete": true,
+        "keep-minimum-versions": 5
+      },
+      "storage-limits": {
+        "max-backup-size": "1GB",
+        "warning-threshold": "800MB",
+        "critical-threshold": "950MB"
+      }
+    },
+    
+    "metrics-weekly": {
+      "policy-name": "Metrics Data Retention",
+      "description": "Retention policy for monitoring and metrics data",
+      "schedule-type": "weekly",
+      "retention-rules": {
+        "keep-weekly": {
+          "period": "8W",
+          "interval": "1W",
+          "description": "Keep weekly backups for 8 weeks"
+        },
+        "keep-monthly": {
+          "period": "12M",
+          "interval": "1M",
+          "description": "Keep monthly backups for 12 months"
+        },
+        "keep-yearly": {
+          "period": "5Y",
+          "interval": "1Y",
+          "description": "Keep yearly backups for 5 years"
+        }
+      },
+      "cleanup-settings": {
+        "auto-cleanup": true,
+        "cleanup-frequency": "monthly",
+        "verify-before-delete": false,
+        "keep-minimum-versions": 2
+      },
+      "storage-limits": {
+        "max-backup-size": "50GB",
+        "warning-threshold": "40GB", 
+        "critical-threshold": "45GB"
+      }
+    },
+    
+    "system-weekly": {
+      "policy-name": "System Configuration Retention",
+      "description": "Retention policy for backup system configuration",
+      "schedule-type": "weekly",
+      "retention-rules": {
+        "keep-weekly": {
+          "period": "12W",
+          "interval": "1W",
+          "description": "Keep weekly backups for 12 weeks"
+        },
+        "keep-monthly": {
+          "period": "24M",
+          "interval": "1M",
+          "description": "Keep monthly backups for 24 months"
+        },
+        "keep-yearly": {
+          "period": "10Y",
+          "interval": "1Y",
+          "description": "Keep yearly backups for 10 years"
+        }
+      },
+      "cleanup-settings": {
+        "auto-cleanup": true,
+        "cleanup-frequency": "monthly",
+        "verify-before-delete": true,
+        "keep-minimum-versions": 3
+      },
+      "storage-limits": {
+        "max-backup-size": "5GB",
+        "warning-threshold": "4GB",
+        "critical-threshold": "4.5GB"
+      }
+    }
+  },
+  
+  "global-settings": {
+    "verification-settings": {
+      "auto-verify": true,
+      "verification-frequency": "weekly",
+      "verification-percentage": 10,
+      "verification-samples": 1,
+      "full-verification-frequency": "monthly"
+    },
+    "cleanup-settings": {
+      "global-cleanup-time": "04:00",
+      "cleanup-log-retention": "90D",
+      "temp-file-cleanup": true,
+      "orphaned-file-cleanup": true
+    },
+    "monitoring-settings": {
+      "send-notifications": true,
+      "notification-levels": ["error", "warning"],
+      "health-check-frequency": "hourly",
+      "status-report-frequency": "daily"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "server-settings": {
+    "server-listen-interface": "any",
+    "server-port": "8200",
+    "server-passphrase": "${DUPLICATI_PASSWORD}",
+    "startup-delay": "30s",
+    "log-level": "Information",
+    "log-retention": "30D",
+    "auto-cleanup": true,
+    "auto-compact": true,
+    "auto-vacuum": true,
+    "backup-test-samples": 1,
+    "backup-test-percentage": 0.1,
+    "compression-module": "zip",
+    "encryption-module": "aes",
+    "thread-priority": "BelowNormal",
+    "throttle-upload": "0kb",
+    "throttle-download": "0kb",
+    "max-upload-pr-second": "0kb",
+    "max-download-pr-second": "0kb"
+  },
+  "default-options": {
+    "encryption-module": "aes",
+    "compression-module": "zip",
+    "dblock-size": "50mb",
+    "keep-versions": "0",
+    "retention-policy": "1W:1D,4W:1W,12M:1M",
+    "upload-verification-file": true,
+    "auto-cleanup": true,
+    "auto-compact": true,
+    "backup-test-samples": 1,
+    "backup-test-percentage": 0.1,
+    "zip-compression-level": 6,
+    "zip-compression-method": "deflate"
+  },
+  "ui-settings": {
+    "theme": "dark",
+    "language": "en",
+    "startup-delay": "30s",
+    "allowed-hostnames": "*",
+    "disable-tray-icon-login": false,
+    "startup-delay": "30s"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "backup-job": {
+    "name": "Critical Data Daily Backup",
+    "description": "Daily backup of critical application data volumes",
+    "schedule": "0 2 * * *",
+    "enabled": true,
+    "target": {
+      "type": "file",
+      "path": "/backups/critical-daily",
+      "options": {
+        "alternate-destination-marker": "DUPLICATI",
+        "alternate-target-paths": "/backups/critical-daily-alt"
+      }
+    },
+    "source-paths": [
+      "/source/grafana",
+      "/source/portainer", 
+      "/source/linkding",
+      "/source/actual",
+      "/source/filebrowser",
+      "/source/data/files"
+    ],
+    "filters": [
+      "-*.tmp",
+      "-*.log",
+      "-*~",
+      "-System Volume Information",
+      "-Thumbs.db",
+      "-*.DS_Store"
+    ],
+    "options": {
+      "encryption-module": "aes",
+      "passphrase": "${DUPLICATI_PASSWORD}",
+      "compression-module": "zip",
+      "zip-compression-level": 6,
+      "dblock-size": "50mb",
+      "keep-versions": "0",
+      "retention-policy": "1W:1D,4W:1W,12M:1M",
+      "upload-verification-file": true,
+      "auto-cleanup": true,
+      "auto-compact": true,
+      "backup-test-samples": 1,
+      "backup-test-percentage": 0.1,
+      "thread-priority": "BelowNormal",
+      "asynchronous-concurrent-upload-limit": 4,
+      "asynchronous-concurrent-download-limit": 4,
+      "synchronous-upload": false,
+      "disable-streaming-transfers": false,
+      "use-move-for-store": true,
+      "quota-size": "10GB"
+    },
+    "metadata": {
+      "backup-type": "critical",
+      "frequency": "daily",
+      "priority": "high",
+      "created": "2025-01-25T00:00:00Z",
+      "version": "1.0"
+    }
+  }
+}

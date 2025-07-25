@@ -1,0 +1,164 @@
+{
+  "verification-configuration": {
+    "verification-schedules": {
+      "daily-quick-check": {
+        "schedule": "0 6 * * *",
+        "description": "Daily quick verification of recent backups",
+        "verification-type": "quick",
+        "target-backups": ["critical-data-daily", "config-files-daily"],
+        "checks": [
+          "file-existence",
+          "basic-integrity",
+          "recent-backup-validation"
+        ],
+        "max-duration": "30m",
+        "notification-on-failure": true
+      },
+      
+      "weekly-comprehensive-check": {
+        "schedule": "0 5 * * 1",
+        "description": "Weekly comprehensive verification of all backups",
+        "verification-type": "comprehensive",
+        "target-backups": ["critical-data-daily", "config-files-daily", "metrics-weekly", "system-weekly"],
+        "checks": [
+          "file-existence",
+          "integrity-verification",
+          "backup-completeness",
+          "restoration-test",
+          "retention-compliance"
+        ],
+        "max-duration": "2h",
+        "notification-on-failure": true,
+        "generate-report": true
+      },
+      
+      "monthly-full-verification": {
+        "schedule": "0 3 1 * *",
+        "description": "Monthly full verification with sample restoration",
+        "verification-type": "full",
+        "target-backups": ["critical-data-daily", "config-files-daily", "metrics-weekly", "system-weekly"],
+        "checks": [
+          "file-existence",
+          "integrity-verification", 
+          "backup-completeness",
+          "full-restoration-test",
+          "retention-compliance",
+          "storage-optimization",
+          "performance-analysis"
+        ],
+        "max-duration": "4h",
+        "notification-on-failure": true,
+        "generate-report": true,
+        "sample-restoration": true
+      }
+    },
+    
+    "verification-checks": {
+      "file-existence": {
+        "description": "Verify backup files exist and are accessible",
+        "timeout": "5m",
+        "retry-count": 3,
+        "critical": true
+      },
+      
+      "basic-integrity": {
+        "description": "Basic file integrity check (size, timestamps)",
+        "timeout": "10m",
+        "retry-count": 2,
+        "critical": true
+      },
+      
+      "integrity-verification": {
+        "description": "Duplicati built-in integrity verification",
+        "timeout": "30m",
+        "retry-count": 1,
+        "critical": true,
+        "parameters": {
+          "test-samples": 1,
+          "test-percentage": 10
+        }
+      },
+      
+      "backup-completeness": {
+        "description": "Verify all expected files are backed up",
+        "timeout": "15m",
+        "retry-count": 2,
+        "critical": false
+      },
+      
+      "restoration-test": {
+        "description": "Test restoration of sample files",
+        "timeout": "45m",
+        "retry-count": 1,
+        "critical": false,
+        "parameters": {
+          "sample-count": 5,
+          "temp-restore-path": "/tmp/duplicati-verify"
+        }
+      },
+      
+      "full-restoration-test": {
+        "description": "Full restoration test of complete backup set",
+        "timeout": "2h",
+        "retry-count": 1,
+        "critical": false,
+        "parameters": {
+          "restore-path": "/tmp/duplicati-full-restore",
+          "cleanup-after-test": true
+        }
+      },
+      
+      "retention-compliance": {
+        "description": "Verify retention policies are being followed",
+        "timeout": "10m",
+        "retry-count": 1,
+        "critical": false
+      },
+      
+      "storage-optimization": {
+        "description": "Check for storage optimization opportunities",
+        "timeout": "20m",
+        "retry-count": 1,
+        "critical": false
+      },
+      
+      "performance-analysis": {
+        "description": "Analyze backup performance metrics",
+        "timeout": "15m",
+        "retry-count": 1,
+        "critical": false
+      }
+    },
+    
+    "notification-settings": {
+      "email-notifications": {
+        "enabled": false,
+        "smtp-server": "localhost",
+        "smtp-port": 587,
+        "from-address": "duplicati@homelab.local",
+        "to-addresses": ["admin@homelab.local"]
+      },
+      
+      "webhook-notifications": {
+        "enabled": true,
+        "webhook-url": "http://localhost:3000/api/notifications/duplicati",
+        "timeout": "30s",
+        "retry-count": 3
+      },
+      
+      "log-notifications": {
+        "enabled": true,
+        "log-level": "info",
+        "log-path": "/var/log/duplicati/verification.log"
+      }
+    },
+    
+    "reporting-settings": {
+      "report-formats": ["html", "json"],
+      "report-path": "/var/log/duplicati/reports",
+      "include-charts": true,
+      "include-trends": true,
+      "retention-days": 90
+    }
+  }
+}

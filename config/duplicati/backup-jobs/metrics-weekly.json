@@ -1,0 +1,56 @@
+{
+  "backup-job": {
+    "name": "Metrics and Logs Weekly Backup",
+    "description": "Weekly backup of monitoring data and system metrics",
+    "schedule": "0 3 * * 0",
+    "enabled": true,
+    "target": {
+      "type": "file",
+      "path": "/backups/metrics-weekly",
+      "options": {
+        "alternate-destination-marker": "DUPLICATI",
+        "alternate-target-paths": "/backups/metrics-weekly-alt"
+      }
+    },
+    "source-paths": [
+      "/source/prometheus",
+      "/source/loki",
+      "/source/dashy",
+      "/source/homer"
+    ],
+    "filters": [
+      "-*.tmp",
+      "-*.log",
+      "-*~",
+      "-wal/*",
+      "-chunks_head/*",
+      "-*.lock"
+    ],
+    "options": {
+      "encryption-module": "aes",
+      "passphrase": "${DUPLICATI_PASSWORD}",
+      "compression-module": "zip",
+      "zip-compression-level": 6,
+      "dblock-size": "100mb",
+      "keep-versions": "0",
+      "retention-policy": "4W:1W,12M:1M,5Y:1Y",
+      "upload-verification-file": true,
+      "auto-cleanup": true,
+      "auto-compact": true,
+      "backup-test-samples": 1,
+      "backup-test-percentage": 0.05,
+      "thread-priority": "BelowNormal",
+      "asynchronous-concurrent-upload-limit": 2,
+      "asynchronous-concurrent-download-limit": 2,
+      "synchronous-upload": false,
+      "quota-size": "50GB"
+    },
+    "metadata": {
+      "backup-type": "metrics",
+      "frequency": "weekly",
+      "priority": "medium",
+      "created": "2025-01-25T00:00:00Z",
+      "version": "1.0"
+    }
+  }
+}

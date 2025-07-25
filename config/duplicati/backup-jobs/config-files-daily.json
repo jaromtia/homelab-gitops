@@ -1,0 +1,54 @@
+{
+  "backup-job": {
+    "name": "Configuration Files Daily Backup",
+    "description": "Daily backup of all service configuration files",
+    "schedule": "0 2 30 * *",
+    "enabled": true,
+    "target": {
+      "type": "file", 
+      "path": "/backups/config-daily",
+      "options": {
+        "alternate-destination-marker": "DUPLICATI",
+        "alternate-target-paths": "/backups/config-daily-alt"
+      }
+    },
+    "source-paths": [
+      "/source/data/config"
+    ],
+    "filters": [
+      "-*.tmp",
+      "-*.log", 
+      "-*~",
+      "-*.bak",
+      "-credentials.json",
+      "-*.key",
+      "-*.pem"
+    ],
+    "options": {
+      "encryption-module": "aes",
+      "passphrase": "${DUPLICATI_PASSWORD}",
+      "compression-module": "zip",
+      "zip-compression-level": 9,
+      "dblock-size": "10mb",
+      "keep-versions": "0", 
+      "retention-policy": "1W:1D,4W:1W,12M:1M",
+      "upload-verification-file": true,
+      "auto-cleanup": true,
+      "auto-compact": true,
+      "backup-test-samples": 1,
+      "backup-test-percentage": 0.1,
+      "thread-priority": "BelowNormal",
+      "asynchronous-concurrent-upload-limit": 2,
+      "asynchronous-concurrent-download-limit": 2,
+      "synchronous-upload": false,
+      "quota-size": "1GB"
+    },
+    "metadata": {
+      "backup-type": "configuration",
+      "frequency": "daily",
+      "priority": "high",
+      "created": "2025-01-25T00:00:00Z",
+      "version": "1.0"
+    }
+  }
+}

@@ -11,25 +11,31 @@ services:
     container_name: cloudflared
     restart: unless-stopped
     
+    # Network configuration - connected to frontend network for service access
     networks:
-      - frontend
+      frontend:
+        ipv4_address: 172.20.0.10
     
+    # Volume configuration for tunnel credentials and configuration
     volumes:
       - ./config/cloudflared:/etc/cloudflared:ro
       - cloudflared_logs:/var/log
+      - /etc/localtime:/etc/localtime:ro
     
     # Enhanced command with configuration validation and metrics
     command: >
       tunnel
       --config /etc/cloudflared/config.yml
       --metrics 0.0.0.0:8080
-      --loglevel info
+      --loglevel ${TUNNEL_LOGLEVEL:-info}
       --logfile /var/log/cloudflared.log
+      --grace-period ${TUNNEL_GRACE_PERIOD:-30s}
+      --retries ${TUNNEL_RETRIES:-10}
       run
     
-    # Comprehensive health checks for tunnel connectivity using dedicated script
+    # Comprehensive health checks for tunnel connectivity
     healthcheck:
-      test: ["CMD", "/bin/sh", "/etc/cloudflared/tunnel-health.sh"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/metrics"]
       interval: 60s
       timeout: 30s
       retries: 3
@@ -52,11 +58,14 @@ services:
     
     # Environment variables for tunnel configuration
     environment:
-      - TUNNEL_METRICS_ADDRESS=0.0.0.0:8080
-      - TUNNEL_LOGLEVEL=info
-      - TUNNEL_LOGFILE=/var/log/cloudflared.log
-      - TUNNEL_GRACE_PERIOD=30s
-      - TUNNEL_RETRIES=10
+      - TUNNEL_METRICS_ADDRESS=${TUNNEL_METRICS_ADDRESS:-0.0.0.0:8080}
+      - TUNNEL_LOGLEVEL=${TUNNEL_LOGLEVEL:-info}
+      - TUNNEL_LOGFILE=${TUNNEL_LOGFILE:-/var/log/cloudflared.log}
+      - TUNNEL_GRACE_PERIOD=${TUNNEL_GRACE_PERIOD:-30s}
+      - TUNNEL_RETRIES=${TUNNEL_RETRIES:-10}
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - CLOUDFLARE_TUNNEL_ID=${CLOUDFLARE_TUNNEL_ID}
+      - CLOUDFLARE_ACCOUNT_TAG=${CLOUDFLARE_ACCOUNT_TAG}
     
     # Expose metrics port for monitoring integration
     ports:
@@ -80,6 +89,7 @@ services:
       - "homelab.monitoring.scrape=true"
       - "homelab.monitoring.port=8080"
       - "homelab.monitoring.path=/metrics"
+      - "homelab.network.frontend=true"
 
   # =============================================================================
   # MONITORING STACK
@@ -630,109 +640,184 @@ services:
 # =============================================================================
 networks:
   # Frontend network - Services accessible through Cloudflare tunnel
+  # This network allows external access via the tunnel while maintaining security
   frontend:
     name: homelab_frontend
     driver: bridge
     ipam:
+      driver: default
       config:
         - subnet: ${DOCKER_SUBNET:-172.20.0.0/16}
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: homelab-frontend
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
     labels:
       - "homelab.network.type=frontend"
       - "homelab.network.description=Frontend services accessible via Cloudflare tunnel"
+      - "homelab.network.access=external"
 
-  # Backend network - Internal service communication
+  # Backend network - Internal service communication only
+  # Isolated network for database and internal service communication
   backend:
     name: homelab_backend
     driver: bridge
     internal: true
     ipam:
+      driver: default
       config:
         - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+    driver_opts:
+      com.docker.network.bridge.name: homelab-backend
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "false"
     labels:
       - "homelab.network.type=backend"
       - "homelab.network.description=Internal backend services communication"
+      - "homelab.network.access=internal"
 
   # Monitoring network - Isolated monitoring stack
+  # Dedicated network for metrics collection and log aggregation
   monitoring:
     name: homelab_monitoring
     driver: bridge
     internal: true
     ipam:
+      driver: default
       config:
         - subnet: 172.22.0.0/16
+          gateway: 172.22.0.1
+    driver_opts:
+      com.docker.network.bridge.name: homelab-monitoring
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "false"
     labels:
       - "homelab.network.type=monitoring"
       - "homelab.network.description=Monitoring stack isolation"
+      - "homelab.network.access=internal"
 
 # =============================================================================
 # VOLUMES CONFIGURATION
 # =============================================================================
 volumes:
-  # Monitoring stack volumes
-  prometheus_data:
-    name: homelab_prometheus_data
-    labels:
-      - "homelab.volume.type=metrics"
-      - "homelab.volume.backup=important"
-  
-  grafana_data:
-    name: homelab_grafana_data
-    labels:
-      - "homelab.volume.type=config"
-      - "homelab.volume.backup=critical"
-  
-  loki_data:
-    name: homelab_loki_data
+  # Infrastructure and tunnel volumes
+  cloudflared_logs:
+    name: homelab_cloudflared_logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/logs/cloudflared
     labels:
       - "homelab.volume.type=logs"
       - "homelab.volume.backup=optional"
+      - "homelab.volume.network=frontend"
+
+  # Monitoring stack volumes
+  prometheus_data:
+    name: homelab_prometheus_data
+    driver: local
+    labels:
+      - "homelab.volume.type=metrics"
+      - "homelab.volume.backup=important"
+      - "homelab.volume.network=monitoring"
+  
+  grafana_data:
+    name: homelab_grafana_data
+    driver: local
+    labels:
+      - "homelab.volume.type=config"
+      - "homelab.volume.backup=critical"
+      - "homelab.volume.network=monitoring"
+  
+  loki_data:
+    name: homelab_loki_data
+    driver: local
+    labels:
+      - "homelab.volume.type=logs"
+      - "homelab.volume.backup=optional"
+      - "homelab.volume.network=monitoring"
 
   # Application data volumes
   portainer_data:
     name: homelab_portainer_data
+    driver: local
     labels:
       - "homelab.volume.type=config"
       - "homelab.volume.backup=critical"
+      - "homelab.volume.network=frontend,backend"
   
   homer_data:
     name: homelab_homer_data
+    driver: local
     labels:
       - "homelab.volume.type=config"
       - "homelab.volume.backup=important"
+      - "homelab.volume.network=frontend"
   
   dashy_data:
     name: homelab_dashy_data
+    driver: local
     labels:
       - "homelab.volume.type=config"
       - "homelab.volume.backup=important"
+      - "homelab.volume.network=frontend"
   
   filebrowser_data:
     name: homelab_filebrowser_data
+    driver: local
     labels:
       - "homelab.volume.type=database"
       - "homelab.volume.backup=critical"
+      - "homelab.volume.network=frontend"
   
   linkding_data:
     name: homelab_linkding_data
+    driver: local
     labels:
       - "homelab.volume.type=database"
       - "homelab.volume.backup=critical"
+      - "homelab.volume.network=frontend,backend"
   
   actual_data:
     name: homelab_actual_data
+    driver: local
     labels:
       - "homelab.volume.type=database"
       - "homelab.volume.backup=critical"
+      - "homelab.volume.network=frontend"
   
   duplicati_data:
     name: homelab_duplicati_data
+    driver: local
     labels:
       - "homelab.volume.type=config"
       - "homelab.volume.backup=critical"
-  
-  # Cloudflare tunnel logs volume
-  cloudflared_logs:
-    name: homelab_cloudflared_logs
+      - "homelab.volume.network=frontend,backend"
+
+  # Shared volumes for cross-service communication
+  shared_config:
+    name: homelab_shared_config
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./config
     labels:
-      - "homelab.volume.type=logs"
-      - "homelab.volume.backup=optional"
+      - "homelab.volume.type=shared_config"
+      - "homelab.volume.backup=critical"
+      - "homelab.volume.network=all"
+  
+  shared_data:
+    name: homelab_shared_data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+    labels:
+      - "homelab.volume.type=shared_data"
+      - "homelab.volume.backup=critical"
+      - "homelab.volume.network=all"
