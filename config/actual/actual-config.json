@@ -1,0 +1,44 @@
+{
+  "server": {
+    "name": "Homelab Actual Budget Server",
+    "description": "Personal finance management server for homelab infrastructure",
+    "version": "latest",
+    "port": 5006,
+    "host": "0.0.0.0"
+  },
+  "security": {
+    "passwordRequired": true,
+    "encryptionEnabled": true,
+    "httpsOnly": false,
+    "corsEnabled": true,
+    "allowedOrigins": [
+      "https://budget.${DOMAIN}",
+      "http://localhost:5006"
+    ]
+  },
+  "storage": {
+    "dataPath": "/data",
+    "backupEnabled": true,
+    "maxFileSize": "100MB",
+    "retentionDays": 365
+  },
+  "features": {
+    "multiUser": false,
+    "apiEnabled": true,
+    "mobileSync": true,
+    "importExport": true,
+    "budgetTemplates": true
+  },
+  "logging": {
+    "level": "info",
+    "enableAccessLog": true,
+    "enableErrorLog": true,
+    "logRotation": true
+  },
+  "performance": {
+    "cacheEnabled": true,
+    "compressionEnabled": true,
+    "maxConnections": 100,
+    "requestTimeout": 30000
+  }
+}
