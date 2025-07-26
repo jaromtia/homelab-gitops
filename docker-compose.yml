@@ -647,7 +647,7 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: ${DOCKER_SUBNET:-172.20.0.0/16}
+        - subnet: 172.20.0.0/24
           gateway: 172.20.0.1
     driver_opts:
       com.docker.network.bridge.name: homelab-frontend
@@ -667,7 +667,7 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.21.0.0/16
+        - subnet: 172.21.0.0/24
           gateway: 172.21.0.1
     driver_opts:
       com.docker.network.bridge.name: homelab-backend
@@ -687,7 +687,7 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.22.0.0/16
+        - subnet: 172.22.0.0/24
           gateway: 172.22.0.1
     driver_opts:
       com.docker.network.bridge.name: homelab-monitoring
